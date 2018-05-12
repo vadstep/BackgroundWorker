@@ -45,7 +45,7 @@ import static com.example.background.Constants.CHANNEL_ID;
 import static com.example.background.Constants.DELAY_TIME_MILLIS;
 
 
-final class WorkerUtils {
+public final class WorkerUtils {
     private static final String TAG = WorkerUtils.class.getSimpleName();
 
     /**
@@ -57,7 +57,7 @@ final class WorkerUtils {
      * @param message Message shown on the notification
      * @param context Context needed to create Toast
      */
-    static void makeStatusNotification(String message, Context context) {
+    public static void makeStatusNotification(String message, Context context) {
 
         // Make a channel if necessary
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

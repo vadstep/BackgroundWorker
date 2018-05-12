@@ -39,7 +39,6 @@
 
         <activity android:name=".BlurActivity">
         </activity>
-
     </application>
 
 </manifest>

@@ -18,9 +18,11 @@ package com.example.background;
 
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -28,6 +30,10 @@ import android.widget.ProgressBar;
 import android.widget.RadioGroup;
 
 import com.bumptech.glide.Glide;
+import com.example.background.workers.WorkerUtils;
+
+import androidx.work.Data;
+import androidx.work.WorkStatus;
 
 
 public class BlurActivity extends AppCompatActivity {
@@ -52,7 +58,7 @@ public class BlurActivity extends AppCompatActivity {
         mGoButton = findViewById(R.id.go_button);
         mOutputButton = findViewById(R.id.see_file_button);
         mCancelButton = findViewById(R.id.cancel_button);
-
+        mOutputButton.setVisibility(View.GONE);
         // Image uri should be stored in the ViewModel; put it there then display
         Intent intent = getIntent();
         String imageUriExtra = intent.getStringExtra(Constants.KEY_IMAGE_URI);
@@ -63,6 +69,51 @@ public class BlurActivity extends AppCompatActivity {
 
         // Setup blur image file button
         mGoButton.setOnClickListener(view -> mViewModel.applyBlur(getBlurLevel()));
+        mCancelButton.setOnClickListener(view -> mViewModel.cancelWork());
+        mOutputButton.setOnClickListener(view -> {
+            Uri currentUri = mViewModel.getOutputUri();
+
+            try {
+                if (currentUri != null) {
+                    Intent actionView = new Intent(Intent.ACTION_VIEW, currentUri);
+                    if (actionView.resolveActivity(getPackageManager()) != null) {
+                        startActivity(actionView);
+                    }
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+                WorkerUtils.makeStatusNotification("Cant show Image", this);
+                mOutputButton.setVisibility(View.GONE);
+            }
+        });
+        mViewModel.getOutputStatus().observe(this, listOfWorkStatuses -> {
+
+            // If there are no matching work statuses, do nothing
+            if (listOfWorkStatuses == null || listOfWorkStatuses.isEmpty()) {
+                return;
+            }
+
+            // We only care about the one output status.
+            // Every continuation has only one worker tagged TAG_OUTPUT
+            WorkStatus workStatus = listOfWorkStatuses.get(0);
+
+            boolean finished = workStatus.getState().isFinished();
+            if (!finished) {
+                showWorkInProgress();
+            } else {
+                showWorkFinished();
+                Data outputData =workStatus.getOutputData();
+
+                        String outputImageUri =outputData.getString(Constants.KEY_IMAGE_URI, null);
+                // Constants.KEY_IMAGE_URI key
+
+                // If there is an output file show "See File" button
+                if (!TextUtils.isEmpty(outputImageUri)) {
+                    mViewModel.setOutputUri(outputImageUri);
+                    mOutputButton.setVisibility(View.VISIBLE);
+                }
+            }
+        });
     }
 
     /**
